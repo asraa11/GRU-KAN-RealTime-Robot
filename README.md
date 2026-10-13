@@ -1,4 +1,3 @@
-```markdown
 # Real-Time Hand Gesture Recognition for Robotic Arm Control using GRU-KAN
 
 <div align="center">
@@ -34,6 +33,37 @@ The system operates **entirely on CPU** and processes **raw 3D skeletal data** f
 ---
 
 ## ✨ Key Features
+
+- 🎯 **90.33% window-level accuracy** with only **27,615 parameters**
+- ⚡ **90 predictions per second** on standard CPU hardware
+- 🤖 **Real-time control** of a physical 3-DOF robotic arm
+- 🧠 **Learnable B-spline activations** (KAN) replace fixed-activation MLPs
+- 🔄 **Sliding-window inference** for continuous streaming classification
+- 🛡️ **Semantic Guard + Hysteresis** for robust gesture confirmation
+- 🎛️ **Gesture-conditioned axis filter** for decoupled control axes
+- 🧊 **Three-stage joint-command smoothing** (EMA + velocity + acceleration)
+- 💻 **CPU-only** — no GPU required
+
+---
+
+## 📊 Performance Summary
+
+| Metric | Value |
+|:---|:---:|
+| **Test Accuracy (window-level)** | **90.33%** |
+| **Macro F1-Score** | **0.904** |
+| **Macro Precision** | 0.908 |
+| **Macro Recall** | 0.903 |
+| **Model Parameters** | **27,615** |
+| **Prediction Rate** | 90 predictions/s |
+| **Confirmation Delay** | ≈ 44 ms |
+| **Arm-Motion Success Rate** | **88%** (±5°) |
+| **Gripper Actuation Success** | **100%** |
+| **Execution Platform** | CPU-only (Intel i7-12700H) |
+
+---
+
+## 🏗️ System Architecture
 
 - 🎯 **90.33% window-level accuracy** with only **27,615 parameters**
 - ⚡ **90 predictions per second** on standard CPU hardware

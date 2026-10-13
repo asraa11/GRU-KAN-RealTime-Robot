@@ -891,7 +891,6 @@ class UltraleapRealTimeGUI:
         self.gesture_label = ttk.Label(left_panel, text="---", font=('Arial', 14, 'bold'), foreground="green")
         self.gesture_label.pack(anchor=tk.W)
         self.confidence_label = ttk.Label(left_panel, text="Confidence: 0.00")
-        self.confidence_label.pack(anchor=tk.W)
 
         right_panel = ttk.Frame(main_frame)
         right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)

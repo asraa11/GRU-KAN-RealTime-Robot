@@ -288,12 +288,10 @@ The GUI provides:
 | Training Stride | 15 frames (62.5% overlap) |
 | Deployment Stride | 1 frame (97.5% overlap) |
 | Prediction Rate | Up to 90 predictions/s |
-| Unanimous-Agreement Window | Last 4 predictions |
 | Confirmation Delay | ≈ 44 ms @ 90 fps |
 | Effective Training FPS | 45 fps (odd-frame decimation) |
 | Deployment FPS | 90 fps (full stream) |
 | EMA Filter α | 0.45 |
-| Control Frequency | 30 Hz |
 | Serial Baud Rate | 9600 bps |
 
 ---

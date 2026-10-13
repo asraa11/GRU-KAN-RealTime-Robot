@@ -1,4 +1,3 @@
-
 import sys
 import warnings
 import logging
@@ -26,9 +25,7 @@ warnings.filterwarnings("ignore", message=".*degrees of freedom.*")
 warnings.filterwarnings("ignore", message=".*std().*")
 logging.getLogger("kan").setLevel(logging.ERROR)
 
-# ============================================================
-# FAKE numpy._core
-# ============================================================
+
 def create_fake_numpy_core():
     if hasattr(np, '_core'):
         return
@@ -78,9 +75,7 @@ def create_fake_numpy_core():
 
 create_fake_numpy_core()
 
-# ============================================================
-# CONFIGURATION  (نفس إعدادات الكود الأول + معمارية الكود الثاني)
-# ============================================================
+
 class Config:
     # ---- Runtime settings (من الكود الأول) ----
     USE_FRAME_SAMPLING = True
@@ -118,7 +113,6 @@ class Config:
     ]
     FEATURES = len(REQUIRED_FEATURES)
 
-    # ---- Architecture defaults (من الكود الثاني — تُستبدل من الـ checkpoint) ----
     GRU_HIDDEN_SIZE = 38
     GRU_NUM_LAYERS = 1
     ATTENTION_HEADS = 2
@@ -127,12 +121,8 @@ class Config:
     KAN_SPLINE_ORDER = 3
     DROPOUT_RATE = 0.4
 
-    # ⚠️ موديل النسخة الثانية (لأن المعمارية الجديدة تحتاج هذا الموديل)
     MODEL_SAVE_PATH = "hand_gesture_fast_smart_9classes.pth"
 
-# ============================================================
-# ROBOT / WORKSPACE
-# ============================================================
 L1 = 0.15
 L2 = 0.15
 L3 = 0.16
@@ -150,6 +140,11 @@ SCALE = 0.8
 
 _NEUTRAL = {"x": None, "y": None, "z": None}
 _NEUTRAL_LOCK = threading.Lock()
+
+# 🆕 آخر delta محفوظة لكل محور (raw قبل SCALE) — الفلترة بين الإيماءات
+_LAST_DELTA = {"x": 0.0, "y": 0.0, "z": 0.0}
+_LAST_DELTA_LOCK = threading.Lock()
+
 DEBUG_VERBOSE = False
 
 REALTIME_HZ = 30
@@ -189,9 +184,6 @@ _LATEST_HAND_LOCK = threading.Lock()
 
 _FINGER_STATE = {"j3": HOME_J3, "j6": HOME_J6}
 
-# ============================================================
-# حالة الماتورات
-# ============================================================
 _current_arm_angles = [float(HOME_J1), float(HOME_J2), float(HOME_J5)]
 _current_arm_vels   = [0.0, 0.0, 0.0]
 _ema_targets        = [float(HOME_J1), float(HOME_J2), float(HOME_J5)]
@@ -259,9 +251,6 @@ def compute_ik_xyz(x, y, z, push_pull=False):
             float(np.clip(j5, 0, 160))]
 
 
-# ═══════════════════════════════════════════════════════════════
-# hand_to_target مع فلترة المحاور حسب الإيماءة
-# ═══════════════════════════════════════════════════════════════
 def hand_to_target(features, gesture=None, invert_z=False):
     hx = float(features[0]) / 1000.0
     hy = float(features[1]) / 1000.0
@@ -276,19 +265,31 @@ def hand_to_target(features, gesture=None, invert_z=False):
     if nx is None:
         return [HOME_X, HOME_Y, HOME_Z]
 
-    dx = hx - nx
-    dy = hy - ny
-    dz = hz - nz
+    raw_dx = hx - nx
+    raw_dy = hy - ny
+    raw_dz = hz - nz
 
-    if gesture in ["left", "right"]:
-        dy = 0.0
-        dz = 0.0
-    elif gesture in ["raise", "lower"]:
-        dx = 0.0
-        dz = 0.0
-    elif gesture in ["push", "pull"]:
-        dx = 0.0
-        dy = 0.0
+    with _LAST_DELTA_LOCK:
+        if gesture in ["left", "right"]:
+            _LAST_DELTA["x"] = raw_dx
+            dx = _LAST_DELTA["x"]     # ← يُحدَّث
+            dy = _LAST_DELTA["y"]     # ← آخر قيمة محفوظة
+            dz = _LAST_DELTA["z"]     # ← آخر قيمة محفوظة
+        elif gesture in ["raise", "lower"]:
+            _LAST_DELTA["y"] = raw_dy
+            dx = _LAST_DELTA["x"]
+            dy = _LAST_DELTA["y"]     # ← يُحدَّث
+            dz = _LAST_DELTA["z"]
+        elif gesture in ["push", "pull"]:
+            _LAST_DELTA["z"] = raw_dz
+            dx = _LAST_DELTA["x"]
+            dy = _LAST_DELTA["y"]
+            dz = _LAST_DELTA["z"]     # ← يُحدَّث
+        else:
+            # بدون إيماءة ذراع → تحديث الكل (سلوك افتراضي)
+            dx = raw_dx
+            dy = raw_dy
+            dz = raw_dz
 
     dx *= SCALE
     dy *= SCALE
@@ -303,9 +304,7 @@ def hand_to_target(features, gesture=None, invert_z=False):
 
     return [tx, ty, tz]
 
-# ============================================================
-# SERIAL
-# ============================================================
+
 SERIAL_PORT = 'COM4'
 BAUDRATE = 9600
 ser = None
@@ -356,7 +355,7 @@ def _realtime_worker():
     print(f"⚡ Real-time worker بدأ ({REALTIME_HZ} Hz)")
     print(f"   🎯 Cylindrical IK: J1 من x، J2/J5 من y و z")
     print(f"   🔥 Filtering: كل إيماءة تستخدم محورها فقط")
-    print(f"   🧹 Keep last 15 frames بعد كل إيماءة")
+    print(f"   🧊 المحاور الأخرى تحتفظ بآخر قيمة (لا ترجع لصفر)")
     print(f"   Servo speed = {Config.SERVO_MAX_SPEED_DEG_PER_SEC}°/s")
     print("=" * 90)
 
@@ -467,6 +466,8 @@ def _realtime_worker():
                 print(f"📷 Hand RAW (mm):     x={hand_raw[0]:+8.1f}  y={hand_raw[1]:+8.1f}  z={hand_raw[2]:+8.1f}")
             if hand_delta is not None:
                 print(f"📐 Hand Delta (m):    dx={hand_delta[0]:+7.3f}  dy={hand_delta[1]:+7.3f}  dz={hand_delta[2]:+7.3f}")
+            with _LAST_DELTA_LOCK:
+                print(f"💾 Last Delta (raw):  x={_LAST_DELTA['x']:+7.3f}  y={_LAST_DELTA['y']:+7.3f}  z={_LAST_DELTA['z']:+7.3f}")
             with _NEUTRAL_LOCK:
                 if _NEUTRAL["x"] is not None:
                     print(f"🏠 Neutral (m):       x={_NEUTRAL['x']:+7.3f}  y={_NEUTRAL['y']:+7.3f}  z={_NEUTRAL['z']:+7.3f}")
@@ -525,6 +526,12 @@ def capture_neutral_from_current():
         _NEUTRAL["x"] = hx
         _NEUTRAL["y"] = hy
         _NEUTRAL["z"] = hz
+
+    # 🆕 صفّر آخر delta عند كالبريشن جديد
+    with _LAST_DELTA_LOCK:
+        _LAST_DELTA["x"] = 0.0
+        _LAST_DELTA["y"] = 0.0
+        _LAST_DELTA["z"] = 0.0
 
     _IK_NEUTRAL = None
     _first_cycle = True
@@ -928,6 +935,13 @@ class UltraleapRealTimeGUI:
             _NEUTRAL["x"] = None
             _NEUTRAL["y"] = None
             _NEUTRAL["z"] = None
+
+        # 🆕 صفّر آخر delta
+        with _LAST_DELTA_LOCK:
+            _LAST_DELTA["x"] = 0.0
+            _LAST_DELTA["y"] = 0.0
+            _LAST_DELTA["z"] = 0.0
+
         _IK_NEUTRAL = None
         _first_cycle = True
         _smoothed_target = [HOME_X, HOME_Y, HOME_Z]
@@ -964,6 +978,13 @@ class UltraleapRealTimeGUI:
             _NEUTRAL["x"] = None
             _NEUTRAL["y"] = None
             _NEUTRAL["z"] = None
+
+        # 🆕 صفّر آخر delta
+        with _LAST_DELTA_LOCK:
+            _LAST_DELTA["x"] = 0.0
+            _LAST_DELTA["y"] = 0.0
+            _LAST_DELTA["z"] = 0.0
+
         _IK_NEUTRAL = None
         _FINGER_STATE["j3"] = HOME_J3
         _FINGER_STATE["j6"] = HOME_J6
@@ -1324,7 +1345,7 @@ class UltraleapRealTimeGUI:
         print(f"   Classes ({num_classes}): {list(self.label_encoder.classes_)}")
         print(f"   WINDOW_SIZE = {Config.WINDOW_SIZE}")
         print(f"   🎯 Cylindrical IK + Filtering")
-        print(f"   🧹 Keep last 15 frames بعد كل إيماءة")
+        print(f"   🧊 المحاور غير المفلترة تحتفظ بآخر قيمة")
         print(f"   🛡️  Semantic Guard: ACTIVE")
         print(f"   🔒 Hysteresis: {Config.FINGER_STREAK_REQUIRED} تأكيدات متتالية\n")
 
@@ -1435,12 +1456,13 @@ def main():
     print("=" * 60)
     print("  ULTRALEAP + GRU + ATTENTION + KAN + ROBOT ARM")
     print("  🎯 CYLINDRICAL IK + FILTERING")
+    print("  🧊 المحاور غير المفلترة تحتفظ بآخر قيمة")
     print("  🛡️  SEMANTIC GUARD + 🔒 HYSTERESIS")
     print("  🧠 Attention Pooling + Residual (Architecture v2)")
     print("=" * 60)
-    print(f"  left/right  → x فقط (y, z = 0)")
-    print(f"  raise/lower → y فقط (x, z = 0)")
-    print(f"  push/pull   → z فقط (x, y = 0)")
+    print(f"  left/right  → x فقط (y, z = آخر قيمة محفوظة)")
+    print(f"  raise/lower → y فقط (x, z = آخر قيمة محفوظة)")
+    print(f"  push/pull   → z فقط (x, y = آخر قيمة محفوظة)")
     print(f"  🧹 Keep last 15 frames بعد كل إيماءة")
     print("=" * 60)
     print(f"  SERVO speed = {Config.SERVO_MAX_SPEED_DEG_PER_SEC}°/s")

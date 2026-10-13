@@ -32,34 +32,6 @@ The system operates **entirely on CPU** and processes **raw 3D skeletal data** f
 
 ---
 
-## ✨ Key Features
-
-- 🎯 **90.33% window-level accuracy** with only **27,615 parameters**
-- ⚡ **90 predictions per second** on standard CPU hardware
-- 🤖 **Real-time control** of a physical 3-DOF robotic arm
-- 🧠 **Learnable B-spline activations** (KAN) replace fixed-activation MLPs
-- 🔄 **Sliding-window inference** for continuous streaming classification
-- 🛡️ **Semantic Guard + Hysteresis** for robust gesture confirmation
-- 🎛️ **Gesture-conditioned axis filter** for decoupled control axes
-- 🧊 **Three-stage joint-command smoothing** (EMA + velocity + acceleration)
-- 💻 **CPU-only** — no GPU required
-
----
-
-## 📊 Performance Summary
-
-| Metric | Value |
-|:---|:---:|
-| **Test Accuracy (window-level)** | **90.33%** |
-| **Macro F1-Score** | **0.904** |
-| **Macro Precision** | 0.908 |
-| **Macro Recall** | 0.903 |
-| **Model Parameters** | **27,615** |
-| **Prediction Rate** | 90 predictions/s |
-| **Confirmation Delay** | ≈ 44 ms |
-| **Arm-Motion Success Rate** | **88%** (±5°) |
-| **Gripper Actuation Success** | **100%** |
-| **Execution Platform** | CPU-only (Intel i7-12700H) |
 
 ---
 
@@ -89,7 +61,6 @@ The system operates **entirely on CPU** and processes **raw 3D skeletal data** f
 | **Prediction Rate** | 90 predictions/s |
 | **Confirmation Delay** | ≈ 44 ms |
 | **Arm-Motion Success Rate** | **88%** (±5°) |
-| **Gripper Actuation Success** | **100%** |
 | **Execution Platform** | CPU-only (Intel i7-12700H) |
 
 ---
@@ -171,30 +142,13 @@ The system operates **entirely on CPU** and processes **raw 3D skeletal data** f
 ```
 GRU-KAN-RealTime-Robot/
 │
-├── training/                          # Model training code
-│   ├── train_deployment.py            # Train 9-gesture model
-│   └── README_training.md
+├── run code.py                                    
+├── trainingsliding.py   
 │
-├── realtime/                          # Real-time inference pipeline
-│   ├── realtime_inference.py          # Main GUI + inference
-│   └── README_realtime.md
-│
-├── arduino/                           # Embedded firmware
-│   └── robot_arm_controller.ino       # Arduino Mega 2560
-│
-├── configs/                           # Configuration files
-│   └── deployment_config.yaml
-│
-├── data/                              # Sample data (not full dataset)
+├── my_hand_data/                              # Sample data (not full dataset)
 │   ├── sample_open.csv
-│   ├── sample_close.csv
-│   └── README_data.md
+│   └── sample_close.csv
 │
-├── docs/                              # Documentation & figures
-│   ├── architecture.png
-│   ├── sliding_window.png
-│   ├── robotic_arm.jpg
-│   └── setup_photo.jpg
 │
 ├── results/                           # Experimental results
 │   ├── confusion_matrix_9gestures.png
@@ -203,7 +157,6 @@ GRU-KAN-RealTime-Robot/
 │   └── lr_schedule.png
 │
 ├── requirements.txt
-├── LICENSE
 └── README.md
 ```
 
@@ -379,9 +332,7 @@ right_001.csv
 
 ## 📈 Results
 
-### Confusion Matrix (9 Gestures, 900 Held-Out Windows)
 
-![Confusion Matrix](results/confusion_matrix_9gestures.png)
 
 ### Per-Class Metrics
 
@@ -398,9 +349,7 @@ right_001.csv
 | `right` | 0.990 | 0.980 | 0.985 | 100 |
 | **Macro Avg** | **0.908** | **0.903** | **0.904** | **900** |
 
-### Training Dynamics
 
-![Training Curves](results/training_curves_9gestures.png)
 
 ---
 
@@ -492,7 +441,6 @@ If you use this code in your research, please cite:
 | **Wisam S. Hacham** | Mechatronics Eng., Al-Khwarizmi College | Corresponding Author |
 | **Muhannad K. Sabir** | Biomedical Eng., Al-Khwarizmi College | Co-Author |
 
-📧 **Corresponding Author:** wisam@kecbu.uobaghdad.edu.iq
 
 🏛️ **Institution:** University of Baghdad, Al-Khwarizmi College of Engineering, Iraq
 
@@ -513,11 +461,4 @@ This project is licensed under the **MIT License** — see the [LICENSE](LICENSE
 
 ---
 
-<div align="center">
 
-**⭐ If you find this work useful, please consider giving it a star! ⭐**
-
-Made with ❤️ at the University of Baghdad
-
-</div>
-```
